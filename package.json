@@ -1,0 +1,17 @@
+{
+  "name": "dev-framework-template",
+  "version": "1.0.0",
+  "description": "Dev Framework template for TDD and clean code practices with Claude Code",
+  "main": "index.js",
+  "scripts": {
+    "complexity": "node utils/complexity-detector.js"
+  },
+  "keywords": [
+    "claude",
+    "tdd",
+    "framework",
+    "ai-assisted-development"
+  ],
+  "author": "",
+  "license": "MIT"
+}
