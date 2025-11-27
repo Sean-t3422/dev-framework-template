@@ -82,10 +82,21 @@ npm init -y
 | Command | Description |
 |---------|-------------|
 | `/build-feature` | Start full TDD workflow for a feature |
+| `/orchestrate` | **Switch to orchestrator mode** - Claude delegates to sub-agents instead of doing work directly |
+| `/status` | Show current workflow status and next actions |
 | `/fast-mode on` | Enable quick mode for simple tasks |
 | `/fast-mode off` | Back to strict TDD mode |
 | `/init-session` | Initialize Claude Code session |
 | `/check-project` | Load current project context |
+
+### Orchestrator Mode
+
+When you say "be the orchestrator" or use `/orchestrate`, Claude switches from doing work directly to delegating:
+
+- **Before**: Claude reads files, writes code, makes edits
+- **After**: Claude creates blueprints and dispatches sub-agents to do the work
+
+This is useful for complex multi-part features where you want systematic execution with quality gates.
 
 ## Example Workflows
 
@@ -110,6 +121,18 @@ Claude:
 - Detects simple task
 - Makes the fix directly
 - No unnecessary ceremony
+```
+
+### Orchestrator Mode
+```
+You: "I need you to orchestrate building these 5 UI components"
+
+Claude:
+1. Analyzes and creates blueprints for each component
+2. Pre-validates blueprints with Codex (GPT-5)
+3. Dispatches sub-agents to build each component
+4. Verifies each implementation
+5. Tracks progress with hierarchical todos
 ```
 
 ## Getting Framework Updates
