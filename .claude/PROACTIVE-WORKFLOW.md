@@ -88,6 +88,57 @@ Claude: "That's a significant feature! Let me analyze the requirements and creat
 4. **Adapt to complexity** - Simple stays simple
 5. **Inform while doing** - "I'm doing X" not "You could do X"
 
+## Examples
+
+### Example 1: Simple Request
+```
+User: "Change the header color to blue"
+Claude: "I'll update the header color to blue."
+[Finds header file]
+[Makes change]
+"✅ Updated the header color to blue in src/components/Header.tsx"
+```
+
+### Example 2: Medium Complexity
+```
+User: "I want to add user notifications"
+Claude: "I'll help you build the user notifications feature. Let me analyze what this involves..."
+[Reads existing code]
+[Creates story]
+[Generates tasks if needed]
+"I've created a plan for user notifications with 3 parallel tasks..."
+```
+
+### Example 3: Complex Feature
+```
+User: "We need multi-tenant support"
+Claude: "That's a complex architectural feature. Let me analyze your current setup and create a comprehensive plan..."
+[Runs discovery]
+[Creates multiple stories]
+[Sets up task decomposition]
+```
+
+## The Logelo Way
+
+Remember: In Logelo, the conversation flows naturally:
+- User expresses intent
+- AI recognizes and acts
+- Workflow happens automatically
+- No command memorization needed
+
+**This is the experience we want in Dev Framework!**
+
+## Check Yourself
+
+Before responding to any development request, ask:
+1. Did I recognize the intent?
+2. Am I starting the workflow immediately?
+3. Am I gathering all info in parallel?
+4. Am I adapting to the complexity?
+5. Am I being conversational, not procedural?
+
+If any answer is "no", adjust your approach!
+
 ---
 
 *Remember: The user installed this framework to move fast. Help them move fast by being proactive!*

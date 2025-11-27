@@ -1,33 +1,77 @@
-# Dependencies
+##############################
+# Root .gitignore
+##############################
+
+# Node
 node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# Environment
-.env
-.env.local
-.env.*.local
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Dev Framework session files
-.claude/context/context-session-*.json
-.claude/settings.local.json
-
-# Build output
+# Build and cache
 dist/
 build/
-.next/
-
-# Logs
-*.log
-logs/
-
-# Test output
+.cache/
+.eslintcache
 coverage/
+tmp/
+temp/
+
+# Editors/OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.orig
+
+# Environment and secrets (never commit)
+.env
+.env.*
+.envrc
+.direnv
+.env.local
+.env.secrets
+*.secret
+*.secrets
+*.key
+*.pem
+*.p12
+*.pfx
+app-secrets*
+
+# AI tool artifacts
+.claude/context/
+.claude/completed/
+.claude/**/context-*.json
+
+# Test and E2E artifacts
+test-results/
+playwright-report/
+blob-report/
+screenshots/
+/reports/
+*.trace
+test-output*.txt
+
+# Binary artifacts typically not in repo
+*.webm
+*.mp4
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Supabase local state (project-level already has its own ignore)
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+supabase/*.log
+
+# Next.js build (in case any example builds at root)
+.next/
+out/
+
+##############################
+.mcp.json

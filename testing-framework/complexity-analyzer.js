@@ -119,6 +119,7 @@ class ComplexityAnalyzer {
     const descriptionHints = this.analyzeDescription(feature.description || '');
     const fileImpact = await this.estimateFileImpact(feature);
 
+    // Weighted complexity scoring
     const weights = {
       title: 0.3,
       requirements: 0.2,
@@ -157,6 +158,9 @@ class ComplexityAnalyzer {
     };
   }
 
+  /**
+   * Analyze title for complexity indicators
+   */
   analyzeTitle(title) {
     for (const [level, patterns] of Object.entries(COMPLEXITY_PATTERNS)) {
       for (const pattern of patterns) {
@@ -165,9 +169,12 @@ class ComplexityAnalyzer {
         }
       }
     }
-    return 2;
+    return 2; // Default to moderate if no pattern matches
   }
 
+  /**
+   * Analyze description for complexity keywords
+   */
   analyzeDescription(description) {
     const keywords = {
       trivial: ['cosmetic', 'typo', 'label', 'text'],
@@ -192,6 +199,9 @@ class ComplexityAnalyzer {
     return this.levelToScore(bestMatch);
   }
 
+  /**
+   * Estimate file impact from feature description
+   */
   async estimateFileImpact(feature) {
     const impactKeywords = {
       component: /component|button|form|modal|card/i,
@@ -210,14 +220,19 @@ class ComplexityAnalyzer {
       }
     }
 
-    if (impactedAreas === 0) return 0;
-    if (impactedAreas === 1) return 1;
-    if (impactedAreas === 2) return 2;
-    if (impactedAreas === 3) return 3;
-    return 4;
+    // Map impacted areas to complexity score
+    if (impactedAreas === 0) return 0; // trivial
+    if (impactedAreas === 1) return 1; // simple
+    if (impactedAreas === 2) return 2; // moderate
+    if (impactedAreas === 3) return 3; // complex
+    return 4; // critical
   }
 
+  /**
+   * Compute weighted complexity score
+   */
   computeComplexityScore(titleScore, requirementsCount, descScore, fileScore, weights) {
+    // Map requirements count to score (0-4)
     const requirementsScore = Math.min(requirementsCount / 2, 4);
 
     return (
@@ -228,6 +243,9 @@ class ComplexityAnalyzer {
     );
   }
 
+  /**
+   * Convert numeric score to complexity level
+   */
   scoreToLevel(score) {
     if (score < 0.5) return 'trivial';
     if (score < 1.5) return 'simple';
@@ -236,12 +254,19 @@ class ComplexityAnalyzer {
     return 'critical';
   }
 
+  /**
+   * Convert complexity level to numeric score
+   */
   levelToScore(level) {
     const scores = { trivial: 0, simple: 1, moderate: 2, complex: 3, critical: 4 };
     return scores[level] || 2;
   }
 
+  /**
+   * Calculate confidence in the analysis
+   */
   calculateConfidence(titleScore, requirementsCount, descScore, fileScore) {
+    // Higher confidence when all signals align
     const scores = [
       titleScore,
       Math.min(requirementsCount / 2, 4),
@@ -254,10 +279,14 @@ class ComplexityAnalyzer {
       scores.reduce((sum, score) => sum + Math.pow(score - mean, 2), 0) /
       scores.length;
 
+    // Lower variance = higher confidence
     const confidence = Math.max(0, Math.min(1, 1 - variance / 4));
     return Math.round(confidence * 100) / 100;
   }
 
+  /**
+   * Explain the analysis decision
+   */
   explainAnalysis(level, titleScore, requirementsCount, descScore, fileScore) {
     const profile = COMPLEXITY_LEVELS[level];
     const factors = [];
@@ -280,6 +309,9 @@ class ComplexityAnalyzer {
     };
   }
 
+  /**
+   * Get recommendations based on complexity
+   */
   getRecommendations(level, feature) {
     const recommendations = [];
 
@@ -313,6 +345,41 @@ class ComplexityAnalyzer {
     }
 
     return recommendations;
+  }
+
+  /**
+   * Validate prediction after implementation
+   */
+  async validatePrediction(featureId, predictedLevel, actualDiff) {
+    const actualLines = this.countDiffLines(actualDiff);
+    const actualFiles = this.countDiffFiles(actualDiff);
+
+    let actualLevel = 'trivial';
+    if (actualFiles > 10 || actualLines > 500) actualLevel = 'critical';
+    else if (actualFiles > 5 || actualLines > 200) actualLevel = 'complex';
+    else if (actualFiles > 2 || actualLines > 50) actualLevel = 'moderate';
+    else if (actualFiles > 1 || actualLines > 10) actualLevel = 'simple';
+
+    const mismatch =
+      this.levelToScore(actualLevel) - this.levelToScore(predictedLevel);
+
+    if (Math.abs(mismatch) > 1) {
+      return {
+        warning: `Feature was estimated as ${predictedLevel} but actual impact was ${actualLevel}`,
+        suggestion: `Consider adjusting tests to match ${COMPLEXITY_LEVELS[actualLevel].name} requirements`,
+        actualProfile: COMPLEXITY_LEVELS[actualLevel],
+      };
+    }
+
+    return { match: true, message: 'Complexity estimate was accurate' };
+  }
+
+  countDiffLines(diff) {
+    return (diff.match(/^\+[^+]/gm) || []).length;
+  }
+
+  countDiffFiles(diff) {
+    return (diff.match(/^diff --git/gm) || []).length;
   }
 }
 

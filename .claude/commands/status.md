@@ -8,10 +8,10 @@
 
 ## What This Command Does
 
-Run the state-manager to get current workflow state:
+Run the claude-orchestrator to get current workflow state:
 
 ```bash
-node lib/state-manager.js status
+node lib/claude-orchestrator.js status
 ```
 
 Then report to user in this format:

@@ -9,43 +9,127 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 const execAsync = promisify(exec);
 
+/**
+ * Quality gate definitions by complexity level
+ */
 const GATE_DEFINITIONS = {
   trivial: [],
   simple: [
-    { name: 'Integration Tests Pass', check: 'tests:integration', required: true },
-    { name: 'Minimum Coverage', check: 'coverage:30', required: true },
+    {
+      name: 'Integration Tests Pass',
+      check: 'tests:integration',
+      required: true,
+    },
+    {
+      name: 'Minimum Coverage',
+      check: 'coverage:30',
+      required: true,
+    },
   ],
   moderate: [
-    { name: 'Integration Tests Pass', check: 'tests:integration', required: true },
-    { name: 'Unit Tests Pass', check: 'tests:unit', required: true },
-    { name: 'Minimum Coverage', check: 'coverage:50', required: true },
-    { name: 'Type Checking', check: 'typescript', required: true },
+    {
+      name: 'Integration Tests Pass',
+      check: 'tests:integration',
+      required: true,
+    },
+    {
+      name: 'Unit Tests Pass',
+      check: 'tests:unit',
+      required: true,
+    },
+    {
+      name: 'Minimum Coverage',
+      check: 'coverage:50',
+      required: true,
+    },
+    {
+      name: 'Type Checking',
+      check: 'typescript',
+      required: true,
+    },
   ],
   complex: [
-    { name: 'All Tests Pass', check: 'tests:all', required: true },
-    { name: 'Coverage Target', check: 'coverage:70', required: true },
-    { name: 'Type Checking', check: 'typescript', required: true },
-    { name: 'Linting', check: 'lint', required: true },
-    { name: 'Cross-LLM Review', check: 'cross-llm-review', required: true },
+    {
+      name: 'All Tests Pass',
+      check: 'tests:all',
+      required: true,
+    },
+    {
+      name: 'Coverage Target',
+      check: 'coverage:70',
+      required: true,
+    },
+    {
+      name: 'Type Checking',
+      check: 'typescript',
+      required: true,
+    },
+    {
+      name: 'Linting',
+      check: 'lint',
+      required: true,
+    },
+    {
+      name: 'Cross-LLM Review',
+      check: 'cross-llm-review',
+      required: true,
+    },
   ],
   critical: [
-    { name: 'All Tests Pass', check: 'tests:all', required: true },
-    { name: 'High Coverage', check: 'coverage:85', required: true },
-    { name: 'Type Checking', check: 'typescript', required: true },
-    { name: 'Linting', check: 'lint', required: true },
-    { name: 'Security Tests', check: 'tests:security', required: true },
-    { name: 'Cross-LLM Review', check: 'cross-llm-review', required: true },
-    { name: 'Performance Benchmarks', check: 'performance', required: false },
+    {
+      name: 'All Tests Pass',
+      check: 'tests:all',
+      required: true,
+    },
+    {
+      name: 'High Coverage',
+      check: 'coverage:85',
+      required: true,
+    },
+    {
+      name: 'Type Checking',
+      check: 'typescript',
+      required: true,
+    },
+    {
+      name: 'Linting',
+      check: 'lint',
+      required: true,
+    },
+    {
+      name: 'Security Tests',
+      check: 'tests:security',
+      required: true,
+    },
+    {
+      name: 'Cross-LLM Review',
+      check: 'cross-llm-review',
+      required: true,
+    },
+    {
+      name: 'Performance Benchmarks',
+      check: 'performance',
+      required: false, // Warning only for critical
+    },
   ],
 };
 
+/**
+ * Quality gates enforcement
+ */
 class QualityGates {
   constructor() {
     this.projectRoot = process.cwd();
   }
 
+  /**
+   * Enforce quality gates for a feature
+   * @param {string} featureId - Feature identifier
+   * @param {string} complexityLevel - Complexity level (trivial/simple/moderate/complex/critical)
+   * @returns {Object} Gate results
+   */
   async enforce(featureId, complexityLevel) {
-    console.log(`\n\ud83d\udea7 Enforcing quality gates for ${complexityLevel} feature...`);
+    console.log(`\n🚧 Enforcing quality gates for ${complexityLevel} feature...`);
 
     const gates = GATE_DEFINITIONS[complexityLevel] || [];
     const results = [];
@@ -54,7 +138,7 @@ class QualityGates {
       const result = await this.checkGate(gate);
       results.push(result);
 
-      const status = result.passed ? '\u2705' : '\u274c';
+      const status = result.passed ? '✅' : '❌';
       console.log(`   ${status} ${gate.name}: ${result.message}`);
     }
 
@@ -69,6 +153,9 @@ class QualityGates {
     };
   }
 
+  /**
+   * Check individual gate
+   */
   async checkGate(gate) {
     const [checkType, checkParam] = gate.check.split(':');
 
@@ -104,6 +191,9 @@ class QualityGates {
     }
   }
 
+  /**
+   * Check tests pass
+   */
   async checkTests(testType, gate) {
     try {
       let command;
@@ -119,13 +209,15 @@ class QualityGates {
           command = 'npx jest tests/security --passWithNoTests';
           break;
         case 'all':
-          command = 'npx jest --passWithNoTests';
+          command = 'npx jest --passWithNoTests && npx playwright test';
           break;
         default:
           command = 'npx jest --passWithNoTests';
       }
 
-      await execAsync(command, { cwd: this.projectRoot });
+      const { stdout, stderr } = await execAsync(command, {
+        cwd: this.projectRoot,
+      });
 
       return {
         name: gate.name,
@@ -134,6 +226,7 @@ class QualityGates {
         message: 'All tests passed',
       };
     } catch (error) {
+      // Parse test failures from output
       const failureMatch = error.stdout?.match(/(\d+) failed/);
       const failureCount = failureMatch ? failureMatch[1] : 'unknown';
 
@@ -146,8 +239,12 @@ class QualityGates {
     }
   }
 
+  /**
+   * Check coverage meets target
+   */
   async checkCoverage(targetPercent, gate) {
     try {
+      // Run tests with coverage
       await execAsync('npx jest --coverage --coverageReporters=json-summary', {
         cwd: this.projectRoot,
       });
@@ -189,9 +286,14 @@ class QualityGates {
     }
   }
 
+  /**
+   * Check TypeScript compiles without errors
+   */
   async checkTypeScript(gate) {
     try {
-      await execAsync('npx tsc --noEmit', { cwd: this.projectRoot });
+      await execAsync('npx tsc --noEmit', {
+        cwd: this.projectRoot,
+      });
 
       return {
         name: gate.name,
@@ -212,9 +314,14 @@ class QualityGates {
     }
   }
 
+  /**
+   * Check linting passes
+   */
   async checkLint(gate) {
     try {
-      await execAsync('npm run lint', { cwd: this.projectRoot });
+      await execAsync('npm run lint', {
+        cwd: this.projectRoot,
+      });
 
       return {
         name: gate.name,
@@ -223,16 +330,24 @@ class QualityGates {
         message: 'No linting errors',
       };
     } catch (error) {
+      const errorMatch = error.stdout?.match(/(\d+) error/);
+      const errorCount = errorMatch ? errorMatch[1] : 'unknown';
+
       return {
         name: gate.name,
         passed: false,
         required: gate.required,
-        message: 'Linting errors found',
+        message: `${errorCount} linting error(s) found`,
       };
     }
   }
 
+  /**
+   * Check cross-LLM review was completed
+   */
   async checkCrossLLMReview(gate) {
+    // This is checked by the orchestrator
+    // Here we just verify the review marker file exists
     try {
       const reviewPath = path.join(
         this.projectRoot,
@@ -242,6 +357,7 @@ class QualityGates {
       );
 
       await fs.access(reviewPath);
+
       const reviewData = JSON.parse(await fs.readFile(reviewPath, 'utf8'));
 
       return {
@@ -260,8 +376,12 @@ class QualityGates {
     }
   }
 
+  /**
+   * Check performance benchmarks
+   */
   async checkPerformance(gate) {
     try {
+      // Look for performance test results
       const perfPath = path.join(
         this.projectRoot,
         '.dev-framework',
@@ -287,6 +407,9 @@ class QualityGates {
     }
   }
 
+  /**
+   * Generate summary of gate results
+   */
   generateSummary(results) {
     const total = results.length;
     const passed = results.filter((r) => r.passed).length;
@@ -303,6 +426,27 @@ class QualityGates {
           ? 'All required quality gates passed'
           : `${requiredFailed} required gate(s) failed`,
     };
+  }
+
+  /**
+   * Generate quality gate report
+   */
+  async generateReport(featureId, results) {
+    const reportDir = path.join(this.projectRoot, '.dev-framework', 'gates');
+    await fs.mkdir(reportDir, { recursive: true });
+
+    const reportPath = path.join(reportDir, `${featureId}-gates.json`);
+
+    const report = {
+      featureId,
+      timestamp: new Date().toISOString(),
+      results,
+      summary: this.generateSummary(results),
+    };
+
+    await fs.writeFile(reportPath, JSON.stringify(report, null, 2));
+
+    return reportPath;
   }
 }
 

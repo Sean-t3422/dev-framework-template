@@ -1,0 +1,1 @@
+../../scripts/ask-gemini.sh

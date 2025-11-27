@@ -18,7 +18,6 @@ You have access to a **SlashCommand tool** that invokes Dev Framework workflows:
 
 ### Available Workflows via SlashCommand:
 - `/build-feature` - Full TDD workflow (tests first, then implement)
-- `/orchestrate` - **SWITCH TO ORCHESTRATOR MODE** (delegate, don't do)
 - `/check-project` - Load project context
 - `/fast-mode on` - Enable quick development mode
 - `/review-feature` - Review completed features
@@ -146,9 +145,30 @@ When user says any of these, **USE THE SLASHCOMMAND TOOL IMMEDIATELY**:
 - "I want to create..."
 - "Let's implement..."
 - "Help me add..."
-- "I need to try and build this feature"
+- "I need to try and build this feature" ← EXACTLY what user just said!
 
 **CRITICAL: USE THE SLASHCOMMAND TOOL - DO NOT BUILD DIRECTLY!**
+
+**IMMEDIATELY DO THIS:**
+```
+1. Say: "I'll start the /build-feature workflow for [feature]..."
+2. USE SLASHCOMMAND TOOL:
+   - Tool: SlashCommand
+   - Parameter: command = "/build-feature"
+3. LET THE WORKFLOW TAKE OVER
+   - Do NOT create your own TodoWrite lists
+   - Do NOT start reading files yourself
+   - Do NOT implement anything yourself
+   - The workflow handles everything!
+```
+
+**Example of correct behavior:**
+```
+User: "I need to build a payment system"
+Claude: "I'll start the /build-feature workflow for the payment system..."
+[Invokes SlashCommand tool with command="/build-feature"]
+[/build-feature workflow takes over]
+```
 
 ### Fix Intent → Fast-path execution
 - "Fix this..."
@@ -189,17 +209,53 @@ You have access to ALL these slash commands:
 - `/orchestrate` - **SWITCH TO ORCHESTRATOR MODE** (delegate, don't do)
 - `/fast-mode on/off` - Toggle quick development
 - `/check-project` - Load project context
-- `/status` - Show current workflow status
+- `/codex-orchestrator` - Switch Codex into orchestration/agent-director mode
 - Plus 20+ more in `.claude/commands/`
 
 ## Complexity Detection
 
 Check complexity with:
 ```bash
-node utils/complexity-detector.js "description"
+node /home/sean_unix/Projects/dev-framework/utils/complexity-detector.js "description"
 ```
 
 Simple tasks (UI tweaks, typos) should bypass TDD automatically.
+
+## ❌ DON'T DO THIS (Wrong Behavior):
+
+### Wrong Approach #1: Waiting for commands
+```
+User: "I need to build this feature"
+Claude: "I'd be happy to help! What would you like to do?"
+[Waits for more input] ← WRONG!
+```
+
+### Wrong Approach #2: Building directly without workflow
+```
+User: "I need to build this feature"
+Claude: "Let me help you build this! I'll read the files..."
+[Reads files, creates todos, starts implementing] ← WRONG!
+[This bypasses TDD, no tests, no workflow!]
+```
+
+## ✅ DO THIS INSTEAD (Correct Proactive):
+
+```
+User: "I need to build this feature"
+Claude: "I'll start the /build-feature workflow for this feature..."
+[Uses SlashCommand tool with /build-feature] ← CORRECT!
+[Workflow takes over: loads context, creates brief, generates tests, TDD]
+```
+
+## Parallel Execution
+
+Always gather information simultaneously:
+```
+[Read: package.json]
+[Grep: existing patterns]
+[Glob: related files]
+^ ALL IN ONE MESSAGE
+```
 
 ## Quick Reference
 
@@ -223,9 +279,29 @@ Simple tasks (UI tweaks, typos) should bypass TDD automatically.
 This is the **Dev Framework** - designed to:
 - Enforce TDD for complex features (protects beginners)
 - Skip TDD for simple tasks (respects experienced devs)
-- Be PROACTIVE (no command memorization)
+- Be PROACTIVE like Logelo (no command memorization)
 - Use parallel execution (faster workflow)
-- Enable orchestration mode (delegate to sub-agents)
+
+## Your First Response Protocol
+
+When user expresses ANY development intent, your FIRST response MUST:
+
+### For Build/Feature Requests:
+1. **Recognition**: "I'll start the /build-feature workflow for [task]"
+2. **Tool Invocation**: USE the SlashCommand tool
+   ```
+   <invoke name="SlashCommand">
+   <parameter name="command">/build-feature</parameter>
+   </invoke>
+   ```
+3. **STOP**: Let the workflow take over (don't create todos or read files)
+
+### For Simple Fixes/Updates:
+1. **Recognition**: "I'll fix [issue] directly"
+2. **Fast-path execution**: Make the change immediately
+3. **No workflow needed**: Simple tasks bypass TDD
+
+**DO NOT create your own todo lists or start implementing for complex features. USE THE SLASHCOMMAND TOOL.**
 
 ## 🤖 Codex Checkpoint Reviews (MANDATORY)
 
@@ -233,10 +309,11 @@ This is the **Dev Framework** - designed to:
 
 **🔒 SECURITY + ⚡ PERFORMANCE = EQUALLY CRITICAL**
 
-Every Codex review MUST check BOTH automatically.
+Every Codex review MUST check BOTH automatically using `securityAndPerformanceReview()` method.
 
 **Read `.claude/CODEX-CHECKPOINT-GUIDE.md` NOW** to learn:
 - ✅ When to invoke codex-reviewer (6 checkpoints)
+- ✅ How to invoke Task tool with `securityAndPerformanceReview()`
 - ✅ What Codex reviews at each stage (security AND performance)
 - ✅ Actions to take based on feedback
 
@@ -254,6 +331,8 @@ Every Codex review MUST check BOTH automatically.
 - 💡 **Engineering balance** (over/under-engineering)
 
 **DO NOT** skip checkpoints "to save time" - they save MORE time by catching issues early when they're cheap to fix.
+
+**Remember: Slow code = Broken code. We optimize during development, not after launch.**
 
 ## Remember
 

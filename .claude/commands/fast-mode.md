@@ -32,6 +32,8 @@ Claude: 🚀 Fast mode ENABLED!
   ✅ Parallel execution active
   ✅ Auto-approvals expanded
 
+  Perfect for quick fixes and UI tweaks.
+
 User: Update the header text color to blue
 Claude: [Executes directly without TDD ceremony]
 
@@ -39,4 +41,14 @@ User: /fast-mode off
 Claude: 🔒 Strict mode ENABLED!
   ✅ TDD required for all changes
   ✅ Full quality gates active
+  ✅ Cross-LLM review available
+
+  Best for critical features.
 ```
+
+## Implementation
+This command modifies:
+- `.claude/auto-approval.config` - WORKFLOW_AUTOMATION.skip_tdd_for_simple_tasks
+- `.claude/hooks/auto-tdd-enforcer.js` - ALLOW_SIMPLE_BYPASS flag
+
+Perfect for switching between exploration and production-quality development!

@@ -111,18 +111,77 @@ When creating blueprints, use this structure:
 
 ---
 
-## Agent Types for Dispatch
+## Example Orchestration Session
 
-| Work Type | Agent to Use |
-|-----------|------------|
-| Bug fixes | `general-purpose` |
-| New features | `general-purpose` |
-| Database migrations | `general-purpose` |
-| Test generation | `testing-coordinator` |
-| Brief creation | `brief-writer` |
-| Spec creation | `spec-writer` |
+**User**: "We need to fix the family tile error and build the missing UI components"
 
-**REMEMBER**: Codex is NOT an agent! Call via Bash, not Task tool.
+**WRONG (Worker Mode)**:
+```
+Let me look at that error...
+*reads file*
+I see the issue, let me fix it...
+*edits file directly*
+Done! Now for the UI components...
+*starts writing React code*
+```
+
+**CORRECT (Orchestrator Mode)**:
+```
+Understood. Let me orchestrate this work.
+
+=== ANALYSIS ===
+
+I've identified 2 work streams:
+1. Family tile error fix (blocking)
+2. Missing UI components (5 features)
+
+=== BLUEPRINTS ===
+
+**Blueprint bp-01: Fix Family Tile Type Mismatch**
+- Type: bugfix
+- Est: 5 min
+- Files: src/lib/members/queries.ts
+- Issue: enrolledClasses returns objects but expects strings
+
+**Blueprint bp-02: Documents Management UI**
+- Type: ui
+- Est: 15 min
+- Dependencies: bp-01 (need working app first)
+- Files: src/app/(app)/documents/page.tsx
+
+[...more blueprints...]
+
+=== PRE-VALIDATION ===
+
+Calling Codex to validate bp-01...
+
+[Bash: node testing-framework/agents/codex-reviewer.js ...]
+
+Codex: APPROVED
+
+=== DISPATCH ===
+
+Spawning agent for bp-01...
+
+[Task: general-purpose with blueprint details]
+
+Agent Result: Fixed type mismatch in queries.ts
+
+=== VERIFICATION ===
+
+[Bash: node testing-framework/agents/codex-reviewer.js ...]
+
+Codex: APPROVED
+
+=== PROGRESS ===
+
+[TodoWrite with updated status]
+
+bp-01: Fix Family Tile ✅
+bp-02: Documents UI 🔄 (in progress)
+bp-03: Merchandise UI ⏳
+...
+```
 
 ---
 
@@ -145,6 +204,32 @@ Blueprint Todos (Story level):
 ├── bp-03: Merchandise UI ⏳
 └── ...
 ```
+
+---
+
+## Agent Types for Dispatch
+
+| Work Type | Agent to Use |
+|-----------|--------------|
+| Bug fixes | `general-purpose` |
+| New features | `general-purpose` |
+| Database migrations | `general-purpose` |
+| Test generation | `testing-coordinator` |
+| Brief creation | `brief-writer` |
+| Spec creation | `spec-writer` |
+
+**REMEMBER**: Codex is NOT an agent! Call via Bash, not Task tool.
+
+---
+
+## Resuming Orchestration
+
+If you need to resume from a previous session:
+
+1. Ask user for context (what was completed, what's pending)
+2. Read relevant state files in `.dev-framework/state/`
+3. Reconstruct todo list
+4. Continue from last checkpoint
 
 ---
 

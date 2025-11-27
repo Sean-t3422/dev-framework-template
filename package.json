@@ -1,17 +1,61 @@
 {
-  "name": "dev-framework-template",
-  "version": "1.0.0",
-  "description": "Dev Framework template for TDD and clean code practices with Claude Code",
-  "main": "index.js",
-  "scripts": {
-    "complexity": "node utils/complexity-detector.js"
+  "dependencies": {
+    "express": "^5.1.0",
+    "lucide-react": "^0.546.0",
+    "ws": "^8.18.3"
   },
-  "keywords": [
-    "claude",
-    "tdd",
-    "framework",
-    "ai-assisted-development"
-  ],
+  "name": "dev-framework",
+  "version": "1.0.0",
+  "description": "**Purpose:** Build SaaS products 2-3x faster using AI-orchestrated development with intelligent LLM routing.",
+  "main": "run-spec-review-final.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.9.1",
+    "glob": "^11.0.3",
+    "jest": "^30.2.0",
+    "ts-node": "^10.9.2",
+    "ts-jest": "^29.4.5",
+    "typescript": "^5.9.3"
+  },
+  "bin": {
+    "schema-validator": "./cli/guardrails/schema-validator-cli.js"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:unit": "jest --testPathPattern=unit",
+    "test:real": "jest --config jest.config.real.js",
+    "test:db:setup": "node cli/testing/test-database-manager.js setup",
+    "test:db:cleanup": "node cli/testing/test-database-manager.js cleanup",
+    "test:db:reset": "node cli/testing/test-database-manager.js reset",
+    "test:with-schema": "node cli/testing/schema-test-wrapper.js test",
+    "framework:validate": "node cli/guardrails/schema-validator-cli.js validate",
+    "framework:generate-integration-tests": "node cli/testing/schema-test-wrapper.js generate",
+    "framework:check-schema": "node cli/guardrails/schema-validator-cli.js check",
+    "framework:check-rls": "node cli/guardrails/schema-validator-cli.js rls",
+    "framework:migrate": "node cli/migrations/migration-runner.js",
+    "framework:migrate:check": "node cli/migrations/migration-runner.js --check",
+    "framework:migrate:force": "node cli/migrations/migration-runner.js --force",
+    "precommit": "node cli/guardrails/schema-validator-cli.js validate --changed || true",
+    "test:playwright": "node cli/testing/playwright-test-runner.js test",
+    "test:visual": "node .claude/hooks/post-build-visual-test.js",
+    "test:setup-credentials": "node cli/testing/test-credentials.js setup",
+    "test:check-credentials": "node cli/testing/test-credentials.js check",
+    "playwright:setup": "node cli/testing/playwright-e2e-manager.js setup",
+    "playwright:generate": "node cli/testing/playwright-test-generator.js generate"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sean-t3422/dev-framework.git"
+  },
+  "keywords": [],
   "author": "",
-  "license": "MIT"
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Sean-t3422/dev-framework/issues"
+  },
+  "homepage": "https://github.com/Sean-t3422/dev-framework#readme"
 }
