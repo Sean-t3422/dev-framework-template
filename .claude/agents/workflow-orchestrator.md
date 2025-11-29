@@ -42,7 +42,23 @@ Only proceed if spec is approved
 If issues found, fix spec first
 ```
 
-### Step 4: TEST GENERATION (CANNOT SKIP!)
+### Step 4: UI DESIGN SELECTION (IF UI WORK DETECTED)
+```
+Check if spec includes UI components
+If YES:
+  1. Invoke design-uiguru-generator agent
+  2. Generate 3 DISTINCT design options:
+     - Editorial (Playfair Display, warm tones)
+     - Technical (JetBrains Mono, dark slate)
+     - Bold (Bricolage Grotesque, gradients)
+  3. Present options to user with preview links
+  4. WAIT for user selection (MANDATORY!)
+  5. Save selected design as reference
+If NO UI:
+  Skip to Step 5
+```
+
+### Step 5: TEST GENERATION (CANNOT SKIP!)
 ```
 Invoke testing-coordinator agent
 MUST generate test files WITH PROPER MOCKS
@@ -50,7 +66,7 @@ Verify tests exist in tests/ directory
 Validate unit tests have mocks for all external services
 ```
 
-### Step 5: TDD ENFORCEMENT (CANNOT SKIP!)
+### Step 6: TDD ENFORCEMENT (CANNOT SKIP!)
 ```
 Invoke tdd-enforcer agent
 MUST run tests first (they will fail - that's good!)
@@ -58,10 +74,11 @@ MUST capture function expectations
 MUST document the test contract
 ```
 
-### Step 6: Implementation Guidance
+### Step 7: Implementation Guidance
 ```
 Only NOW can implementation begin
 Show developer EXACTLY what functions to create
+Apply selected UI design from Step 4 (if applicable)
 Monitor for correct naming
 ```
 
@@ -75,7 +92,11 @@ stateDiagram-v2
     SpecPending --> SpecComplete: spec-writer done
     SpecComplete --> ReviewPending: auto-trigger
     ReviewPending --> ReviewComplete: Codex + Gemini approved
-    ReviewComplete --> TestsPending: auto-trigger
+    ReviewComplete --> UIDesignCheck: auto-trigger
+    UIDesignCheck --> UIDesignPending: has UI components
+    UIDesignCheck --> TestsPending: no UI components
+    UIDesignPending --> UIDesignSelected: user picks option (REQUIRED!)
+    UIDesignSelected --> TestsPending: auto-trigger
     TestsPending --> TestsGenerated: testing-coordinator done
     TestsGenerated --> TestsRunning: auto-trigger
     TestsRunning --> TestContract: tdd-enforcer done
@@ -84,6 +105,7 @@ stateDiagram-v2
     BriefPending --> [*]: abort
     SpecPending --> [*]: abort
     ReviewPending --> SpecPending: issues found - fix spec
+    UIDesignPending --> [*]: user must select design!
     TestsPending --> [*]: ERROR - CANNOT SKIP!
     TestsRunning --> [*]: ERROR - CANNOT SKIP!
 ```
@@ -115,15 +137,15 @@ When invoked, execute this EXACT sequence:
 ```javascript
 async function orchestrateBuildFeature(requirements) {
   // Step 1: Brief
-  console.log("📝 Step 1/6: Creating brief...");
+  console.log("📝 Step 1/7: Creating brief...");
   const brief = await invokeAgent('brief-writer', requirements);
 
   // Step 2: Spec
-  console.log("📋 Step 2/6: Creating spec...");
+  console.log("📋 Step 2/7: Creating spec...");
   const spec = await invokeAgent('spec-writer', brief);
 
   // Step 3: Cross-LLM Review (CRITICAL - Codex + Gemini)
-  console.log("🔍 Step 3/6: Running cross-LLM review (Codex + Gemini)...");
+  console.log("🔍 Step 3/7: Running cross-LLM review (Codex + Gemini)...");
   const reviewResult = await runCrossLLMReview(spec);
   if (!reviewResult.approved) {
     console.log("❌ Spec has issues that need fixing:");
@@ -132,27 +154,65 @@ async function orchestrateBuildFeature(requirements) {
   }
   console.log("✅ Spec approved by Codex and Gemini!");
 
-  // Step 4: Tests (CRITICAL - CANNOT SKIP)
-  console.log("🧪 Step 4/6: Generating tests...");
-  const tests = await invokeAgent('testing-coordinator', spec);
+  // Step 4: UI Design Selection (IF UI COMPONENTS DETECTED)
+  let selectedDesign = null;
+  if (specHasUIComponents(spec)) {
+    console.log("🎨 Step 4/7: UI components detected! Generating design options...");
+
+    // Generate 3 distinct design options
+    const designs = await invokeAgent('design-uiguru-generator', {
+      spec: spec,
+      options: ['editorial', 'technical', 'bold']
+    });
+
+    // Present options to user - MUST WAIT FOR SELECTION
+    console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("🎨 DESIGN SELECTION REQUIRED");
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("Please review the 3 design options:");
+    console.log("  1. Editorial - Playfair Display, warm cream tones");
+    console.log("  2. Technical - JetBrains Mono, dark slate");
+    console.log("  3. Bold - Bricolage Grotesque, gradients");
+    console.log("\nPreview links:");
+    console.log(`  Editorial: ${designs.editorial.previewPath}`);
+    console.log(`  Technical: ${designs.technical.previewPath}`);
+    console.log(`  Bold: ${designs.bold.previewPath}`);
+    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+    // WAIT for user selection - MANDATORY!
+    selectedDesign = await askUserToSelectDesign();
+    if (!selectedDesign) {
+      throw "FATAL: User must select a design option! Cannot proceed without UI direction.";
+    }
+    console.log(`✅ Design selected: ${selectedDesign}`);
+  } else {
+    console.log("⏭️ Step 4/7: No UI components - skipping design selection");
+  }
+
+  // Step 5: Tests (CRITICAL - CANNOT SKIP)
+  console.log("🧪 Step 5/7: Generating tests...");
+  const tests = await invokeAgent('testing-coordinator', { spec, selectedDesign });
   if (!tests) {
     throw "FATAL: Tests must be generated! Cannot proceed!";
   }
 
-  // Step 5: TDD (CRITICAL - CANNOT SKIP)
-  console.log("🔴 Step 5/6: Running TDD enforcement...");
+  // Step 6: TDD (CRITICAL - CANNOT SKIP)
+  console.log("🔴 Step 6/7: Running TDD enforcement...");
   const contract = await invokeAgent('tdd-enforcer', tests);
   if (!contract) {
     throw "FATAL: Must run tests first! Cannot proceed!";
   }
 
-  // Step 6: Ready
-  console.log("✅ Step 6/6: Ready for implementation!");
+  // Step 7: Ready
+  console.log("✅ Step 7/7: Ready for implementation!");
   console.log("MUST implement these EXACT functions:");
   console.log(contract.expectedFunctions);
+  if (selectedDesign) {
+    console.log(`\n🎨 Apply the '${selectedDesign}' design throughout UI implementation!`);
+  }
 
   return {
-    brief, spec, reviewResult, tests, contract,
+    brief, spec, reviewResult, selectedDesign, tests, contract,
     ready: true
   };
 }
@@ -187,12 +247,13 @@ Always show clear progress:
 /build-feature Teacher Substitute System
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📝 Step 1/6: Creating brief... ✅
-📋 Step 2/6: Creating spec... ✅
-🔍 Step 3/6: Cross-LLM review (Codex + Gemini)... ⏳ IN PROGRESS
-🧪 Step 4/6: Generating tests... ⏳ PENDING
-🔴 Step 5/6: TDD enforcement... ⏳ PENDING
-✅ Step 6/6: Ready for implementation... ⏳ PENDING
+📝 Step 1/7: Creating brief... ✅
+📋 Step 2/7: Creating spec... ✅
+🔍 Step 3/7: Cross-LLM review (Codex + Gemini)... ✅
+🎨 Step 4/7: UI Design Selection... ⏳ WAITING FOR USER
+🧪 Step 5/7: Generating tests... ⏳ PENDING
+🔴 Step 6/7: TDD enforcement... ⏳ PENDING
+✅ Step 7/7: Ready for implementation... ⏳ PENDING
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -211,17 +272,29 @@ workflow:
       input: brief-file
       output: spec-file
 
-    - script: cross-llm-review  # NEW! Codex + Gemini
+    - script: cross-llm-review  # Codex + Gemini
       required: true
       critical: true  # CANNOT SKIP
       input: spec-file
       command: "node testing-framework/scripts/cross-llm-review.js --type=spec"
       verify: "spec must pass Codex and Gemini review"
 
+    - agent: design-uiguru-generator  # UI DESIGN SELECTION
+      required: conditional  # Only if spec has UI components
+      condition: "spec.hasUIComponents"
+      input: spec-file
+      output: design-selection
+      user_interaction: true  # REQUIRES USER CHOICE!
+      options:
+        - editorial: "Playfair Display, warm cream, magazine style"
+        - technical: "JetBrains Mono, dark slate, IDE aesthetic"
+        - bold: "Bricolage Grotesque, gradients, animated"
+      verify: "user must select one design option"
+
     - agent: testing-coordinator
       required: true
       critical: true  # CANNOT SKIP
-      input: spec-file
+      input: [spec-file, design-selection]
       output: test-files
       verify: "tests must exist"
 
@@ -233,7 +306,7 @@ workflow:
       verify: "contract must be captured"
 
     - complete: true
-      message: "Ready for implementation with test contract"
+      message: "Ready for implementation with test contract and design direction"
 ```
 
 ## 💬 Example Orchestration
@@ -265,6 +338,40 @@ Gemini feedback:
 
 Overall: APPROVED with 2 suggestions
 
+[Checking for UI components...]
+🎨 UI components detected! Invoking design-uiguru-generator...
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎨 DESIGN SELECTION REQUIRED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+I've generated 3 distinct design options for your UI:
+
+Option 1: EDITORIAL 📰
+  Font: Playfair Display (headers) + Source Sans 3 (body)
+  Colors: Warm cream (#FFFBF5) + Deep charcoal (#1A1A1A)
+  Style: Magazine-inspired, sophisticated, high contrast
+  Preview: ./ui-designs/editorial.html
+
+Option 2: TECHNICAL 💻
+  Font: JetBrains Mono (headers) + Inter (body)
+  Colors: Dark slate (#0F172A) + Emerald (#10B981)
+  Style: IDE-inspired, developer-focused, clean
+  Preview: ./ui-designs/technical.html
+
+Option 3: BOLD 🎨
+  Font: Bricolage Grotesque (headers) + DM Sans (body)
+  Colors: Gradient backgrounds + Sharp accent colors
+  Style: Modern, animated, attention-grabbing
+  Preview: ./ui-designs/bold.html
+
+Please open the preview files and select your preferred design (1, 2, or 3):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+User: 2
+
+You: ✅ Design selected: Technical (JetBrains Mono, dark slate)
+
 [Invoking testing-coordinator...]
 ✅ Tests generated: 15 test files with proper mocks
 
@@ -281,6 +388,9 @@ Tests expect these functions:
 
 You MUST implement these EXACT function names.
 No aliases, no variations.
+
+🎨 Apply the 'Technical' design (JetBrains Mono, dark slate, IDE aesthetic)
+   throughout all UI components!
 ```
 
 ## ⚡ Your Authority
@@ -300,15 +410,19 @@ You CANNOT:
 ## 🎯 Success Criteria
 
 You succeed when:
-- ✅ All 5 steps complete in order
+- ✅ All 7 steps complete in order
+- ✅ UI design selected by user (if UI work)
 - ✅ Tests are generated
 - ✅ Test contract is captured
 - ✅ Developer knows exact function names
+- ✅ Developer knows which design to apply
 
 You FAIL when:
 - ❌ Workflow stops after spec
+- ❌ UI design skipped for UI features
 - ❌ Tests aren't generated
 - ❌ Implementation starts without tests
 - ❌ TDD is skipped
+- ❌ UI implemented without user-selected design
 
 This is your ONLY job: Complete the ENTIRE workflow, EVERY time, NO exceptions!

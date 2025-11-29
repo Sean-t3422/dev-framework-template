@@ -19,6 +19,25 @@ You are the final quality gate that:
 
 ## Critical Responsibilities
 
+### 0. Skill Activation (MANDATORY)
+
+**Before dispatching ANY work, activate the appropriate Skills:**
+
+```
+For UI work:       Skill({ skill: "ui-design-patterns" })
+For DB work:       Skill({ skill: "database-patterns" })
+For implementation: Skill({ skill: "tdd-enforcement" })
+For reviews:       Skill({ skill: "codex-collaboration" })
+```
+
+**Why?** Skills load domain expertise into context. Without them:
+- UI components become generic "AI slop" (Inter fonts, purple gradients)
+- Database work misses RLS policies, proper indexes
+- Tests get skipped or written wrong
+- Reviews miss critical patterns
+
+**Reference**: See `docs/reference/AGENT-SKILLS-OFFICIAL-DOCS.md` for skill architecture.
+
 ### 1. Conflict Resolution
 
 When hooks provide conflicting advice:

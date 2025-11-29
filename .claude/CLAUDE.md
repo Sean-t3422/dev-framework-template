@@ -50,10 +50,13 @@ If you see this error:
 **IMMEDIATELY READ**: `.claude/WORKFLOW-PHASES-GUIDE.md`
 
 That guide explains:
-1. **Phase 1 DISCOVER**: Ask discovery questions FIRST, then create brief, get Codex approval
-2. **Phase 2 DESIGN**: Create test strategy, get Codex approval
-3. **Phase 3 BUILD**: Check complexity → Orchestration OR TDD
-4. **Phase 4 FINALIZE**: Cleanup and done
+1. **Phase 0 PRE-DISCOVERY**: Explore codebase, check ui-component-library skill, detect epics
+2. **Phase 1 DISCOVER**: Ask discovery questions FIRST, then create brief, get Codex approval
+3. **Phase 2 DESIGN**: Create test strategy, get Codex approval
+4. **Phase 3 BUILD**: Check complexity → Orchestration OR TDD
+5. **Phase 4 FINALIZE**: Cleanup and done
+
+**NEW: Phase 0 is MANDATORY** - Always explore and check for epics before discovery!
 
 ### ⚠️ AGENT INVOCATION RULES - READ CAREFULLY!
 
@@ -73,6 +76,33 @@ That guide explains:
 - **Codex reviews** → `node testing-framework/agents/codex-reviewer.js --security`
 
 **Do NOT write briefs/specs/tests directly! Always invoke the appropriate agent.**
+
+### 🚫 NEVER Write Briefs Directly - HARD BLOCK
+
+**You MUST NOT write brief files directly using the Write tool.**
+
+This is a HARD CONSTRAINT - violations break the entire workflow:
+
+```
+❌ WRONG:
+Write({ file_path: "briefs/feature.md", content: "..." })
+
+✅ CORRECT:
+Task({ subagent_type: "brief-writer", prompt: "Create brief for..." })
+```
+
+**Why this matters:**
+- Manual brief writing bypasses standardized structure
+- Skips discovery question prompts built into brief-writer
+- Misses Codex validation checkpoint
+- Results in incomplete or inconsistent briefs
+
+**Always use:**
+- `Task({ subagent_type: "brief-writer", ... })` for creating briefs
+- `Task({ subagent_type: "spec-writer", ... })` for creating specs
+- Codex review via CLI after ANY brief/spec creation
+
+**If you find yourself about to Write a brief file → STOP → Use the agent instead.**
 
 ---
 
@@ -130,6 +160,34 @@ node testing-framework/agents/codex-reviewer.js --security --files "src/lib/paym
 
 **VIOLATION OF THIS RULE = BROKEN WORKFLOW. Always use the real CLI.**
 
+### 📋 Mandatory Codex Review After Brief Creation
+
+**After ANY brief is created (via brief-writer agent), you MUST:**
+
+1. **Run Codex review immediately:**
+   ```bash
+   node testing-framework/agents/codex-reviewer.js --brief "path/to/brief.md" --prompt "Review this brief for completeness, clarity, and feasibility"
+   ```
+
+2. **Address any Codex feedback** before proceeding to spec phase
+
+3. **Only after Codex approval**, proceed to create specs
+
+**This checkpoint catches:**
+- Missing requirements or edge cases
+- Unclear acceptance criteria
+- Infeasible scope or timeline
+- Security/compliance considerations
+- Integration gaps with existing features
+
+**This is NOT optional.** Skipping Codex review after brief creation = broken workflow.
+
+```
+Flow: Discovery → brief-writer agent → Codex review → (fix if needed) → spec-writer agent
+                                           ↑
+                                    YOU ARE HERE after brief creation
+```
+
 ---
 
 **DO NOT skip the discovery questions!** The user needs to answer questions about what they want BEFORE you create any brief.
@@ -138,20 +196,47 @@ node testing-framework/agents/codex-reviewer.js --security --files "src/lib/paym
 
 ## Intent Recognition Rules
 
-When user says any of these, **USE THE SLASHCOMMAND TOOL IMMEDIATELY**:
+When user says any of these, **ASK FOR CONFIRMATION before invoking workflow**:
 
-### Building Intent → INVOKE /build-feature using SlashCommand tool
+### Building Intent → ASK FIRST, THEN INVOKE /build-feature
+
+**Trigger phrases (detect these):**
 - "I need to build..."
 - "I want to create..."
 - "Let's implement..."
 - "Help me add..."
-- "I need to try and build this feature" ← EXACTLY what user just said!
+- "Let's get this created..."
+- "Let's get this done..."
+- "Let's do this..."
+- "Let's get started on..."
+- "I'm ready to build..."
+- "Time to build..."
+- "Let's make this happen..."
+- "Can you build..."
+- "Create a feature for..."
+- "I need to try and build this feature"
 
-**CRITICAL: USE THE SLASHCOMMAND TOOL - DO NOT BUILD DIRECTLY!**
+**CRITICAL: ASK FOR CONFIRMATION - DO NOT AUTO-INVOKE!**
 
-**IMMEDIATELY DO THIS:**
+**When you detect build intent, use AskUserQuestion:**
 ```
-1. Say: "I'll start the /build-feature workflow for [feature]..."
+Question: "It sounds like you're ready to build. Would you like me to start the /build-feature workflow?"
+
+Options:
+1. "Yes, start the workflow" → Invoke /build-feature via SlashCommand
+2. "No, let's keep discussing" → Continue discovery conversation
+3. "Just a quick fix" → Fast-path execution (no TDD workflow)
+```
+
+**Why confirmation matters:**
+- Prevents premature workflow invocation during brainstorming
+- Lets user continue discovery if not ready
+- Avoids accidental triggering on casual conversation
+- Gives user control over when formal workflow begins
+
+**After user confirms "Yes":**
+```
+1. Say: "Starting the /build-feature workflow for [feature]..."
 2. USE SLASHCOMMAND TOOL:
    - Tool: SlashCommand
    - Parameter: command = "/build-feature"
@@ -164,8 +249,10 @@ When user says any of these, **USE THE SLASHCOMMAND TOOL IMMEDIATELY**:
 
 **Example of correct behavior:**
 ```
-User: "I need to build a payment system"
-Claude: "I'll start the /build-feature workflow for the payment system..."
+User: "Let's get this feature created"
+Claude: [Uses AskUserQuestion] "It sounds like you're ready to build..."
+User: "Yes, start the workflow"
+Claude: "Starting the /build-feature workflow..."
 [Invokes SlashCommand tool with command="/build-feature"]
 [/build-feature workflow takes over]
 ```
@@ -177,6 +264,54 @@ Claude: "I'll start the /build-feature workflow for the payment system..."
 - "Change this..."
 
 **Execute immediately without TDD for simple fixes**
+
+### Epic Intent → Decompose into briefs BEFORE /build-feature
+
+**Trigger phrases (detect these - indicates large scope):**
+- "I need a whole system for..."
+- "Build me a complete..."
+- "I want to add [complex noun: dashboard, management, portal]..."
+- "Create a full [feature] with all the..."
+- "I need CRUD for..."
+- "Build end-to-end..."
+- "I want the complete workflow for..."
+
+**When detected, run Epic Check BEFORE /build-feature:**
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║ 🔍 EPIC DETECTION - Checking if decomposition needed         ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║ This sounds like a large feature. Let me check:              ║
+║                                                              ║
+║ Epic Indicators (ANY true = decompose):                      ║
+║ □ Multiple user roles affected?                              ║
+║ □ Multiple database tables (>2)?                             ║
+║ □ Multiple API endpoints (>3)?                               ║
+║ □ Multiple UI pages/views?                                   ║
+║ □ Crosses module boundaries?                                 ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+**If EPIC detected:**
+1. Break into CRUD-sized briefs:
+   - [FEAT]-1.1: Create [entity]
+   - [FEAT]-1.2: View [entity]
+   - [FEAT]-1.3: List [entities]
+   - [FEAT]-1.4: Edit [entity]
+   - [FEAT]-1.5: Delete [entity]
+2. Run /build-feature for EACH brief separately
+3. Use brief template: `.claude/templates/brief-template.md`
+
+**Why this matters:**
+- Smaller briefs = fewer mistakes
+- CRUD pattern = predictable scope
+- Each brief = complete brief → spec → build cycle
+- User prefers cautious decomposition
+
+---
 
 ### Orchestrator Intent → INVOKE /orchestrate using SlashCommand tool
 - "Be the orchestrator"
@@ -201,6 +336,45 @@ When in orchestrator mode, you:
 - **ALWAYS** dispatch via Task tool
 - **ALWAYS** verify with Codex after
 - **ALWAYS** track hierarchical todos
+
+### User Feedback Intent → INVOKE /orchestrate (Multiple issues = orchestration)
+
+**Trigger phrases (detect these):**
+- "I got this email from users..."
+- "Here's feedback from..."
+- "Users are reporting..."
+- "We need to look into these issues..."
+- "Here are some bug reports..."
+- "These are the problems users found..."
+- "Can you investigate these..."
+- "Fix all these issues..."
+- "Here's what users are saying..."
+
+**IMMEDIATELY invoke `/orchestrate` - User feedback with multiple issues requires orchestration!**
+
+**After `/orchestrate` is invoked, follow the User Feedback Triage process:**
+1. **INVESTIGATE** - Categorize each issue (BUG, MISSING FEATURE, USER ERROR, BY DESIGN)
+2. **CREATE BRIEFS** - Use brief-writer agent for each BUG/MISSING FEATURE
+3. **CODEX REVIEW** - Validate each brief
+4. **THEN** proceed to orchestration loop for blueprints
+
+**❌ WRONG:**
+```
+User: "Here's an email with user issues"
+Claude: [Investigates]
+Claude: "Let me design a UI component for this..." ← SKIPPED BRIEFS!
+```
+
+**✅ RIGHT:**
+```
+User: "Here's an email with user issues"
+Claude: [Invokes /orchestrate]
+Claude: [Investigates and categorizes]
+Claude: [Creates briefs via brief-writer for each fix]
+Claude: [Codex reviews briefs]
+Claude: [Creates blueprints]
+Claude: [Dispatches agents]
+```
 
 ## Available Commands
 
@@ -265,12 +439,18 @@ Always gather information simultaneously:
 | "Fix this bug" | Execute fix directly if simple (fast-path) |
 | "I want to implement Y" | USE SlashCommand("/build-feature") |
 | "Update the Z" | Direct change with fast path (no workflow) |
+| "Build me a complete system for..." | Run EPIC CHECK first, decompose, then /build-feature per brief |
+| "I need CRUD for X" | Run EPIC CHECK, break into Create/Read/Update/Delete briefs |
 | "Be the orchestrator" | USE SlashCommand("/orchestrate") |
 | "You are the orchestrator" | USE SlashCommand("/orchestrate") |
 | "Let's do it" (after planning) | USE SlashCommand("/orchestrate") |
 | "Create blueprints for X" | USE SlashCommand("/orchestrate") |
+| "Here's user feedback/email..." | USE SlashCommand("/orchestrate") → Triage → Briefs → Blueprints |
+| "Users are reporting issues..." | USE SlashCommand("/orchestrate") → Investigate → Create briefs |
 
 **CRITICAL: Use the SlashCommand TOOL, don't just start working!**
+
+**EPIC DECOMPOSITION**: Large features must be broken into CRUD-sized briefs. Each brief runs through its own brief → spec → build cycle.
 
 **ORCHESTRATOR MODE**: When triggered, you become a conductor - you delegate ALL work to sub-agents via Task tool. You NEVER write code directly.
 
@@ -334,8 +514,90 @@ Every Codex review MUST check BOTH automatically using `securityAndPerformanceRe
 
 **Remember: Slow code = Broken code. We optimize during development, not after launch.**
 
+## 🎯 SKILLS - Domain Expertise On Demand (MANDATORY)
+
+**CRITICAL**: Skills load domain expertise into your context. You MUST activate them before relevant work!
+
+### What Are Skills?
+
+Skills are modular capabilities in `.claude/skills/` that provide:
+- **Specialized knowledge** (design patterns, database conventions)
+- **Anti-patterns to avoid** (AI slop, missing RLS)
+- **Best practices** (accessibility, performance)
+
+### Available Skills
+
+| Skill | When to Activate | What It Provides |
+|-------|------------------|------------------|
+| `ui-design-patterns` | ANY UI/component work | Avoids generic AI aesthetic, Tailwind patterns, accessibility |
+| `database-patterns` | ANY database/migration work | RLS policies, naming conventions, indexes, idempotent SQL |
+| `tdd-enforcement` | ANY implementation work | RED→GREEN→REFACTOR, test file structure, coverage targets |
+| `codex-collaboration` | Reviews and checkpoints | Triggers cross-LLM validation patterns |
+
+### How to Activate Skills
+
+**Use the Skill tool BEFORE dispatching work:**
+
+```
+// For UI work - MANDATORY
+Skill({ skill: "ui-design-patterns" })
+
+// For database work - MANDATORY
+Skill({ skill: "database-patterns" })
+
+// For any implementation - MANDATORY
+Skill({ skill: "tdd-enforcement" })
+```
+
+### Skill Activation Matrix
+
+| Work Type | Skills to Invoke |
+|-----------|------------------|
+| Landing page / UI component | `ui-design-patterns` |
+| Database migration | `database-patterns` |
+| API endpoint | `tdd-enforcement` |
+| Full feature build | ALL skills in sequence |
+| Bug fix | `tdd-enforcement` (write test first) |
+
+### Why Skills Matter
+
+**Without `ui-design-patterns`:**
+- Generic Inter fonts, purple gradients (AI slop)
+- Missing accessibility, poor contrast
+- Cookie-cutter layouts
+
+**Without `database-patterns`:**
+- Missing RLS policies (security hole!)
+- camelCase instead of snake_case
+- No indexes on foreign keys
+- Non-idempotent migrations
+
+**Without `tdd-enforcement`:**
+- Tests written after code (or not at all)
+- Inadequate coverage
+- No regression prevention
+
+### Orchestration + Skills Flow
+
+```
+1. Analyze work type
+2. ACTIVATE relevant Skills ← YOU ARE HERE
+3. Pre-validate with Codex
+4. Dispatch agent WITH skill guidance
+5. Verify with Codex
+```
+
+**Reference Documentation:**
+- `docs/reference/AGENT-SKILLS-OFFICIAL-DOCS.md` - Full architecture
+- `docs/reference/AGENT-SKILLS-FRONTEND-DESIGN.md` - UI patterns
+- `docs/SKILLS-INTEGRATION-GUIDE.md` - How skills + commands work together
+
+---
+
 ## Remember
 
 **The user chose this framework to MOVE FAST. Help them move fast by being PROACTIVE!**
+
+**SKILLS + CODEX + ORCHESTRATION = Quality at Speed**
 
 Now read `.claude/PROACTIVE-WORKFLOW.md` for detailed patterns.

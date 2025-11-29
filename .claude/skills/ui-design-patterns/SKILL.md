@@ -19,6 +19,30 @@ Automatically applies when:
 - User mentions UI/UX terms: "button", "form", "modal", "layout"
 - UI-related tasks: "make it look better", "improve design"
 
+## Avoiding Generic AI Aesthetics
+
+**CRITICAL**: Avoid "distributional convergence" - the tendency to produce generic, forgettable designs:
+
+### What to AVOID (Generic AI Slop):
+- Overused fonts: Inter, Roboto, Arial, Open Sans, Lato, system fonts
+- Clichéd colors: Purple gradients on white backgrounds
+- Predictable layouts and component patterns
+- Cookie-cutter design lacking context-specific character
+
+### What to DO (Distinctive Design):
+- **Typography**: Use distinctive fonts that elevate aesthetics
+  - Code aesthetic: JetBrains Mono, Fira Code, Space Grotesk
+  - Editorial: Playfair Display, Crimson Pro
+  - Technical: IBM Plex family, Source Sans 3
+  - Distinctive: Bricolage Grotesque, Newsreader
+- **Font weights**: Use extremes (100/200 vs 800/900), not 400 vs 600
+- **Size jumps**: 3x+ size difference, not 1.5x
+- **Colors**: Dominant colors with sharp accents > evenly-distributed palettes
+- **Backgrounds**: Layer gradients, geometric patterns, contextual effects - NOT solid colors
+- **Motion**: One well-orchestrated page load with staggered reveals > scattered micro-interactions
+
+**Reference**: See `docs/reference/AGENT-SKILLS-FRONTEND-DESIGN.md` for comprehensive guidance
+
 ## Design System Foundation
 
 ### Component Library Structure

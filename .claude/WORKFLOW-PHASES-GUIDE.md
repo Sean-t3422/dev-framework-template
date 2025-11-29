@@ -7,12 +7,12 @@
 ## The Complete Workflow
 
 ```
-DISCOVER → DESIGN → BUILD → FINALIZE
-   ↓          ↓        ↓         ↓
- Brief     Spec   Blueprints  Cleanup
-   ↓          ↓        ↓
- Codex    Codex    Codex Pre-Validation
- Review   Review   (BEFORE implementation)
+PRE-DISCOVERY → DISCOVER → DESIGN → BUILD → FINALIZE
+      ↓            ↓          ↓        ↓         ↓
+   Explore       Brief      Spec   Blueprints  Cleanup
+   Libraries       ↓          ↓        ↓
+   Epic Check   Codex      Codex    Codex Pre-Validation
+                Review     Review   (BEFORE implementation)
 ```
 
 **Key Architecture**:
@@ -36,6 +36,131 @@ DISCOVER → DESIGN → BUILD → FINALIZE
 - `archive/orchestrators-old/workflow-orchestrator.js`
 - `archive/orchestrators-old/tdd-orchestration-hub.js`
 - `archive/orchestrators-old/enhanced-orchestration.js`
+
+---
+
+## Phase 0: PRE-DISCOVERY (Exploration & Epic Detection)
+
+**Purpose**: Before asking discovery questions, understand what already exists and if this is too big for one brief.
+
+### Step 0.1: Explore Codebase (MANDATORY)
+
+Ask: "Do we already have this in our code?"
+
+```
+Task({
+  subagent_type: "Explore",
+  description: "Explore codebase for [feature]",
+  prompt: `Search the codebase for existing implementations related to [feature].
+
+           Look for:
+           - Existing components that do similar things
+           - Related database tables/migrations
+           - API patterns we already use
+           - Similar features we can extend
+
+           Return a summary of:
+           1. What we FOUND (can reuse/extend)
+           2. What we NEED (doesn't exist yet)
+           3. Integration points (where new code connects)`
+})
+```
+
+**Why this matters:**
+- Prevents reinventing existing components
+- Informs discovery questions (skip questions about things that exist)
+- Reduces brief scope by identifying reusable code
+
+### Step 0.2: Check External Libraries (UI Component Skill)
+
+Ask: "Does shadcn/ui or Radix have this?"
+
+```
+Skill({ skill: "ui-component-library" })
+```
+
+Then match feature needs against the component catalog:
+
+```markdown
+## Library Check Results
+
+### Available from shadcn/ui:
+- Dialog for modal
+- Form for validation
+- DataTable for lists
+
+### Available from Radix:
+- Primitives for custom composition
+
+### Build Custom:
+- [Only what MUST be custom]
+```
+
+**Why this matters:**
+- Uses proven, accessible components
+- Reduces development time
+- Ensures consistency with existing UI
+
+### Step 0.3: Epic Detection (Complexity Check)
+
+Ask: "Is this too big for one brief?"
+
+**Epic Indicators** (ANY true = decompose into briefs):
+
+| Question | If YES → |
+|----------|----------|
+| Multiple user roles affected? | Epic → Multiple briefs |
+| Multiple database tables (>2)? | Epic → Multiple briefs |
+| Multiple API endpoints (>3)? | Epic → Multiple briefs |
+| Multiple UI pages/views? | Epic → Multiple briefs |
+| Crosses module boundaries? | Epic → Multiple briefs |
+
+**If Epic detected:**
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║ 🚨 EPIC DETECTED - DECOMPOSITION REQUIRED                    ║
+╠══════════════════════════════════════════════════════════════╣
+║                                                              ║
+║ This feature is too large for one brief.                     ║
+║                                                              ║
+║ Breaking into CRUD-sized briefs:                             ║
+║                                                              ║
+║   [FEAT]-1.1: Create [entity]                               ║
+║   [FEAT]-1.2: View [entity]                                 ║
+║   [FEAT]-1.3: List [entities]                               ║
+║   [FEAT]-1.4: Edit [entity]                                 ║
+║   [FEAT]-1.5: Delete [entity]                               ║
+║   [FEAT]-1.6: Search/Filter [entities]                      ║
+║                                                              ║
+║ Each brief gets its own brief → spec → build cycle.          ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+```
+
+**Brief template location:** `.claude/templates/brief-template.md`
+
+### Step 0.4: Document Pre-Discovery Findings
+
+Before proceeding to Phase 1, document:
+
+```markdown
+## Pre-Discovery Summary
+
+### Existing Assets Found
+- Components: [list from Step 0.1]
+- Patterns: [list from Step 0.1]
+- External libs: [list from Step 0.2]
+
+### Scope Decision
+- [ ] Single Brief → Proceed to Phase 1: DISCOVER
+- [ ] Epic → Create brief breakdown first
+
+### Briefs (if Epic)
+1. [FEAT]-X.1: [name] - [size]
+2. [FEAT]-X.2: [name] - [size]
+3. ...
+```
 
 ---
 
@@ -581,7 +706,10 @@ For a brief to be ready for orchestration:
 
 ## Remember
 
+✅ **ALWAYS** run Phase 0 first (Explore, Libraries, Epic Check)
 ✅ **ALWAYS** ask discovery questions BEFORE creating brief
+✅ **ALWAYS** check ui-component-library skill before building UI
+✅ **ALWAYS** decompose Epics into CRUD-sized briefs
 ✅ **ALWAYS** get Codex approval before moving to next phase
 ✅ **ALWAYS** pre-validate blueprints BEFORE implementation
 ✅ **NEVER** skip phases - they exist for quality
@@ -591,5 +719,5 @@ For a brief to be ready for orchestration:
 
 ---
 
-**Last Updated**: 2025-11-26
-**Status**: Single unified orchestrator with automated agent dispatch
+**Last Updated**: 2025-11-28
+**Status**: Single unified orchestrator with Phase 0 pre-discovery + automated agent dispatch

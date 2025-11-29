@@ -31,6 +31,23 @@ Or manually when user says:
 - "Check for design issues"
 - "Does this look good?"
 
+## Skill Integration
+
+**IMPORTANT**: The `ui-design-patterns` skill should be activated BEFORE UI work begins!
+
+```
+Skill({ skill: "ui-design-patterns" })
+```
+
+This skill contains:
+- Fonts to avoid (Inter, Roboto, Arial = AI slop)
+- Fonts to prefer (JetBrains Mono, Playfair Display, etc.)
+- Color guidance (dominant colors + sharp accents)
+- Animation patterns (staggered reveals > scattered micro-interactions)
+- Tailwind patterns and accessibility requirements
+
+**Reference**: `docs/reference/AGENT-SKILLS-FRONTEND-DESIGN.md` for full guidance
+
 ## What You Review
 
 ### 1. Spacing & Alignment ⚖️
